@@ -7,8 +7,9 @@ import { TelegramChannel } from './telegram.js';
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 loadProjectEnv(projectRoot);
 
+const hasClaudeAuth = !!(process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_CODE_OAUTH_TOKEN);
+
 const required: Record<string, string | undefined> = {
-  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
   TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID,
 };
@@ -16,6 +17,8 @@ const required: Record<string, string | undefined> = {
 const missing = Object.entries(required)
   .filter(([, v]) => !v)
   .map(([k]) => k);
+
+if (!hasClaudeAuth) missing.unshift('ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN');
 
 if (missing.length > 0) {
   console.error(`Missing required env vars: ${missing.join(', ')}`);

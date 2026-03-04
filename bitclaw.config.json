@@ -1,4 +1,10 @@
 {
   "mcpServers": {},
-  "mounts": []
+  "mounts": [
+    {
+      "host": "~/Documents/code/workout",
+      "container": "/workspace/extra/workout",
+      "readonly": true
+    }
+  ]
 }
