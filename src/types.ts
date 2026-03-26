@@ -37,9 +37,19 @@ export interface OutboundEnvelope {
   [key: string]: unknown;
 }
 
+export interface InboundPhoto {
+  buffer: Buffer;
+  filename: string;
+}
+
+export interface InboundUserMessage {
+  text: string;
+  photos?: InboundPhoto[];
+}
+
 export interface Channel {
   send(text: string): Promise<void>;
-  onMessage(handler: (text: string) => void): void;
+  onMessage(handler: (message: InboundUserMessage) => void): void;
   start(): Promise<void>;
   stop(): Promise<void>;
   setTyping(active: boolean): void;

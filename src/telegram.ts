@@ -1,14 +1,26 @@
-import { Bot } from 'grammy';
+import { Bot, type Api } from 'grammy';
 import telegramifyMarkdown from 'telegramify-markdown';
-import type { Channel } from './types.js';
+import { log } from './log.js';
+import type { Channel, InboundUserMessage } from './types.js';
 
 const MAX_MSG_LENGTH = 4096;
 const TYPING_REPEAT_MS = 4000;
 
+/** Download a file from Telegram by file_id, returning raw bytes. */
+export async function downloadPhoto(api: Api, token: string, fileId: string): Promise<Buffer> {
+  const file = await api.getFile(fileId);
+  if (!file.file_path) throw new Error('No file_path in getFile response');
+  const url = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Photo download failed: HTTP ${res.status}`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
 export class TelegramChannel implements Channel {
   private bot: Bot;
   private chatId: string;
-  private handler: ((text: string) => void) | null = null;
+  private token: string;
+  private handler: ((message: InboundUserMessage) => void) | null = null;
   private typingInterval: ReturnType<typeof setInterval> | null = null;
   private statusMessageId: number | null = null;
 
@@ -19,15 +31,31 @@ export class TelegramChannel implements Channel {
     if (!chatId) throw new Error('TELEGRAM_CHAT_ID is required');
 
     this.chatId = chatId;
+    this.token = token;
     this.bot = new Bot(token);
 
     this.bot.on('message:text', (ctx) => {
       if (String(ctx.chat.id) !== this.chatId) return;
-      this.handler?.(ctx.message.text);
+      this.handler?.({ text: ctx.message.text });
+    });
+
+    this.bot.on('message:photo', async (ctx) => {
+      if (String(ctx.chat.id) !== this.chatId) return;
+      const photo = ctx.message.photo.at(-1)!; // largest resolution
+      const caption = ctx.message.caption ?? '';
+      try {
+        const buffer = await downloadPhoto(this.bot.api, this.token, photo.file_id);
+        const filename = `${Date.now()}_${photo.file_unique_id}.jpg`;
+        this.handler?.({ text: caption, photos: [{ buffer, filename }] });
+      } catch (err) {
+        log(`Failed to download photo: ${err instanceof Error ? err.message : String(err)}`);
+        // Graceful degradation: forward caption only
+        if (caption) this.handler?.({ text: caption });
+      }
     });
   }
 
-  onMessage(handler: (text: string) => void): void {
+  onMessage(handler: (message: InboundUserMessage) => void): void {
     this.handler = handler;
   }
 

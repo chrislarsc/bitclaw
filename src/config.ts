@@ -11,6 +11,7 @@ export interface BitclawPaths {
   sessionsDir: string;
   workspaceDir: string;
   logsDir: string;
+  mediaDir: string;
 }
 
 export function resolveBitclawHomeDir(): string {
@@ -34,6 +35,7 @@ export function createBitclawPaths(homeDir = resolveBitclawHomeDir()): BitclawPa
     sessionsDir: path.join(homeDir, 'sessions', '.claude'),
     workspaceDir: path.join(homeDir, 'workspace'),
     logsDir: path.join(homeDir, 'logs'),
+    mediaDir: path.join(homeDir, 'media'),
   };
 }
 

@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { IPC_POLL_MS, type BitclawPaths } from './config.js';
 import { checkAndFireTasks, ensureTasksDir } from './cron.js';
@@ -32,9 +33,18 @@ export class Orchestrator {
     log(`Starting orchestrator, projectRoot=${this.projectRoot}`);
 
     // Wire channel inbound -> agent IPC
-    this.channel.onMessage((text) => {
+    this.channel.onMessage((message) => {
       if (!this.paths) return;
-      log(`Message received (${text.length} chars), forwarding to agent`);
+      let text = message.text;
+      if (message.photos?.length) {
+        for (const photo of message.photos) {
+          const dest = path.join(this.paths.mediaDir, photo.filename);
+          fs.writeFileSync(dest, photo.buffer);
+          text += `\n[Photo attached — view with Read tool at /media/${photo.filename}]`;
+        }
+      }
+      if (!text.trim()) return;
+      log(`Message received (${text.length} chars, ${message.photos?.length ?? 0} photo(s)), forwarding to agent`);
       sendToAgent(this.paths, {
         type: 'messages',
         text,

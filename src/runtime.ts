@@ -80,6 +80,7 @@ export function startContainer(projectRoot: string): RuntimeStartResult {
         `${paths.ipcDir}:/workspace/ipc`,
         `${paths.workspaceDir}:/workspace/workspace`,
         `${paths.sessionsDir}:/home/node/.claude`,
+        `${paths.mediaDir}:/media:ro`,
       ].flatMap((mount) => ['-v', mount]),
       ...extraMounts,
       CONTAINER_IMAGE,
